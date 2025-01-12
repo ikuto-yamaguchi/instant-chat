@@ -1,0 +1,771 @@
+<!-- public/index.html -->
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>インスタントチャット</title>
+  <style>
+    /* 全体のスタイル設定 */
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+      background-color: #f0f2f5;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    #container {
+      width: 100%;
+      max-width: 800px;
+      height: 90vh;
+      background-color: #fff;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* 各画面のスタイル */
+    .screen {
+      display: none;
+      padding: 20px;
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      justify-content: center; /* 縦方向の中央揃え */
+      align-items: center; /* 横方向の中央揃え */
+    }
+
+    .screen.active {
+      display: flex;
+    }
+
+    h2 {
+      margin-bottom: 20px;
+      text-align: center;
+      color: #333;
+      font-size: 24px; /* フォントサイズを調整 */
+    }
+
+    input[type="text"] {
+      padding: 10px;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      margin-bottom: 10px;
+      /* flex: 1; */ /* ここをコメントアウトまたは削除 */
+      width: 100%; /* 幅を100%に設定 */
+      box-sizing: border-box; /* パディングとボーダーを含めた幅の計算 */
+    }
+
+    button {
+      padding: 10px;
+      font-size: 16px;
+      border: none;
+      border-radius: 4px;
+      background-color: #4CAF50;
+      color: white;
+      cursor: pointer;
+      margin-top: 10px;
+      width: 100%;
+      transition: background-color 0.3s; /* ホバー時のトランジション */
+    }
+
+    button:disabled {
+      background-color: #a5d6a7;
+      cursor: not-allowed;
+    }
+
+    button:hover:not(:disabled) {
+      background-color: #45a049; /* ホバー時の色変更 */
+    }
+
+    /* チャット画面のスタイル */
+    #messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px;
+      background-color: #e5ddd5;
+      box-sizing: border-box;
+      width: 100%;
+    }
+
+    .message {
+      margin-bottom: 10px;
+      padding: 10px;
+      border-radius: 4px;
+      background-color: #fff;
+      box-shadow: 0 1px 1px rgba(0,0,0,0.1);
+    }
+
+    .message .sender {
+      font-weight: bold;
+      margin-bottom: 5px;
+      color: #555;
+    }
+
+    .message .content {
+      color: #333;
+      word-wrap: break-word; /* 長い単語の折り返し */
+    }
+
+    /* フォームのスタイル */
+    #form {
+      display: flex;
+      padding: 10px;
+      border-top: 1px solid #ccc;
+      background-color: #f9f9f9;
+      box-sizing: border-box;
+      width: 100%;
+    }
+
+    #input {
+      flex: 1;
+      padding: 10px;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      margin-right: 10px;
+      box-sizing: border-box;
+    }
+
+    #send, #record, #destroy, #show-info {
+      padding: 10px 15px;
+      font-size: 14px;
+      border: none;
+      border-radius: 4px;
+      margin-left: 5px;
+      cursor: pointer;
+      transition: background-color 0.3s; /* ホバー時のトランジション */
+    }
+
+    #send {
+      background-color: #4CAF50;
+      color: white;
+    }
+
+    #send:hover {
+      background-color: #45a049;
+    }
+
+    #record {
+      background-color: #2196F3;
+      color: white;
+    }
+
+    #record:hover {
+      background-color: #1e88e5;
+    }
+
+    #destroy {
+      background-color: #f44336;
+      color: white;
+    }
+
+    #destroy:hover {
+      background-color: #e53935;
+    }
+
+    #show-info {
+      background-color: #FF9800;
+      color: white;
+    }
+
+    #show-info:hover {
+      background-color: #fb8c00;
+    }
+
+/* ポップアップのスタイル */
+#popup {
+  display: none; /* 初期状態は非表示 */
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0,0,0,0.5);
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+#popup.active {
+  display: flex; /* activeクラスで表示 */
+}
+
+/* ポップアップコンテンツのスタイル */
+#popup-content {
+  background-color: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  position: relative; /* 絶対配置の子要素を基準にする */
+  width: 300px;
+  text-align: center;
+  box-sizing: border-box;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1); /* ボックスシャドウの追加 */
+}
+
+/* 閉じるボタンのスタイル */
+#close-popup {
+  position: absolute;
+  top: -25px;
+  right: 30px;  
+  width: 0px; /* 横幅を設定 */
+  height: 0px; /* 縦幅を設定 */
+  background: none;
+  border: none;
+  font-size: 50px;
+  cursor: pointer;
+  color: #aaa;
+  transition: color 0.3s; /* ホバー時のスムーズな色変化 */
+}
+
+#close-popup:hover {
+  color: #000;
+}
+
+/* QRコードのスタイル */
+#qrcode {
+  width: 100%;
+  height: auto;
+  margin-bottom: 15px;
+}
+
+/* ウェブリンクのスタイル */
+#web-link {
+  display: block;
+  color: #2196F3;
+  text-decoration: none;
+  word-break: break-all; /* 長いURLの折り返し */
+}
+
+#web-link:hover {
+  text-decoration: underline;
+}
+
+/* レスポンシブデザインの対応（任意） */
+@media (max-width: 400px) {
+  #popup-content {
+    width: 90%;
+    padding: 15px;
+  }
+
+  #close-popup {
+    top: 5px;
+    right: 5px;
+    font-size: 18px;
+  }
+}
+
+    /* エラーメッセージ画面のスタイル */
+    #error-message {
+      display: none;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+      text-align: center;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    #error-message.active {
+      display: flex;
+    }
+
+    #error-message button {
+      width: auto;
+      padding: 10px 20px;
+      background-color: #f44336;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+
+    #error-message button:hover {
+      background-color: #e53935;
+    }
+
+    /* 音声メッセージ用のスタイル */
+    audio {
+      width: 100%;
+      max-width: 200px;
+      margin-top: 5px;
+    }
+
+    /* メディアクエリでレスポンシブ対応 */
+    @media (max-width: 600px) {
+      #container {
+        height: 100vh;
+        border-radius: 0;
+      }
+
+      #popup-content {
+        width: 90%;
+      }
+
+      #input {
+        font-size: 14px;
+      }
+
+      button {
+        font-size: 14px;
+      }
+
+      #send, #record, #destroy, #show-info {
+        padding: 8px 10px;
+        font-size: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <!-- ホーム画面（新規チャット作成） -->
+    <div id="home-screen" class="screen active">
+      <h2>インスタントチャット</h2>
+      <input type="text" id="home-nickname" placeholder="ニックネームを入力..." />
+      <button id="start-chat" disabled>新規チャットを開始</button>
+    </div>
+
+    <!-- 参加画面（既存チャット参加） -->
+    <div id="join-screen" class="screen">
+      <h2>チャットに参加</h2>
+      <input type="text" id="join-nickname" placeholder="ニックネームを入力..." />
+      <button id="join-chat" disabled>チャットに参加</button>
+    </div>
+
+    <!-- チャット画面 -->
+    <div id="chat-screen" class="screen">
+      <div id="messages"></div>
+      <form id="form">
+        <input id="input" autocomplete="off" placeholder="メッセージを入力..." />
+        <button type="submit" id="send">送信</button>
+        <button type="button" id="record">音声送信</button>
+        <button type="button" id="destroy">チャット破棄</button>
+        <button type="button" id="show-info">情報表示</button>
+      </form>
+    </div>
+
+    <!-- エラーメッセージ画面 -->
+    <div id="error-message" class="screen">
+      <h2>エラー</h2>
+      <p>指定されたチャットセッションは存在しないか、既に破棄されています。</p>
+      <button onclick="window.location.href='/'">ホームに戻る</button>
+    </div>
+
+    <!-- ポップアップ（情報表示） -->
+    <div id="popup">
+      <div id="popup-content">
+        <button id="close-popup">×</button>
+        <h3>チャット情報</h3>
+        <img id="qrcode" alt="QRコード" />
+        <a href="#" id="web-link" target="_blank">ウェブリンクを開く</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Socket.IOクライアントの読み込み -->
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+
+    // 要素の取得
+    const homeScreen = document.getElementById('home-screen');
+    const joinScreen = document.getElementById('join-screen');
+    const chatScreen = document.getElementById('chat-screen');
+    const errorMessage = document.getElementById('error-message');
+    const startChatButton = document.getElementById('start-chat');
+    const homeNicknameInput = document.getElementById('home-nickname');
+    const joinChatButton = document.getElementById('join-chat');
+    const joinNicknameInput = document.getElementById('join-nickname');
+    const form = document.getElementById('form');
+    const input = document.getElementById('input');
+    const messages = document.getElementById('messages');
+    const sendButton = document.getElementById('send');
+    const recordButton = document.getElementById('record');
+    const destroyButton = document.getElementById('destroy');
+    const showInfoButton = document.getElementById('show-info');
+    const popup = document.getElementById('popup');
+    const closePopupButton = document.getElementById('close-popup');
+    const qrcodeImg = document.getElementById('qrcode');
+    const webLink = document.getElementById('web-link');
+
+    let nickname = '';
+    let sessionId = '';
+
+    // Utility function to convert Base64 to Blob
+    function base64ToBlob(base64, type = 'audio/webm') {
+      const byteCharacters = atob(base64);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      return new Blob([byteArray], {type});
+    }
+
+    // Utility function to convert Blob to Base64
+    function blobToBase64(blob) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const base64data = reader.result.split(',')[1]; // Remove the data URL prefix
+          resolve(base64data);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    }
+
+    // 現在のURLパスからセッションIDを取得
+    const pathParts = window.location.pathname.split('/');
+    sessionId = pathParts[1] || '';
+
+    // 初期化関数
+    async function init() {
+      if (sessionId && sessionId !== 'create') {
+        // ホーム画面と参加画面を非表示にし、チャット画面も一旦非表示にする
+        homeScreen.classList.remove('active');
+        homeScreen.style.display = 'none';
+        joinScreen.classList.remove('active');
+        joinScreen.style.display = 'none';
+        chatScreen.classList.remove('active');
+        chatScreen.style.display = 'none';
+        errorMessage.classList.remove('active');
+        errorMessage.style.display = 'none';
+
+        // ルームに参加
+        socket.emit('join room', sessionId);
+
+        // ニックネームをlocalStorageから取得
+        const storedNicknameTemp = localStorage.getItem('nickname_temp');
+        const storedNickname = localStorage.getItem(`nickname_${sessionId}`);
+
+        if (storedNickname) {
+          nickname = storedNickname;
+          // ニックネームをサーバーに再送信（接続が再確立された場合）
+          socket.emit('set nickname', { sessionId, nickname });
+          // チャット画面を表示
+          chatScreen.classList.add('active');
+          chatScreen.style.display = 'flex';
+        } else if (storedNicknameTemp) {
+          nickname = storedNicknameTemp;
+          localStorage.setItem(`nickname_${sessionId}`, nickname);
+          localStorage.removeItem('nickname_temp');
+          // ニックネームをサーバーに送信
+          socket.emit('set nickname', { sessionId, nickname });
+          // チャット画面を表示
+          chatScreen.classList.add('active');
+          chatScreen.style.display = 'flex';
+        } else {
+          // ニックネームが保存されていない場合、再度入力を促す
+          promptNicknameForExistingSession();
+        }
+
+        // チャット情報（QRコードとウェブリンク）を設定
+        setupChatInfo();
+      } else {
+        // ホーム画面を表示
+        homeScreen.classList.add('active');
+        homeScreen.style.display = 'flex';
+        joinScreen.classList.remove('active');
+        joinScreen.style.display = 'none';
+        chatScreen.classList.remove('active');
+        chatScreen.style.display = 'none';
+        errorMessage.classList.remove('active');
+        errorMessage.style.display = 'none';
+
+        // ホーム画面のセットアップ
+        setupHomeScreen();
+      }
+    }
+
+    // ホーム画面のセットアップ
+    function setupHomeScreen() {
+      // ニックネーム入力の監視
+      homeNicknameInput.addEventListener('input', () => {
+        const name = homeNicknameInput.value.trim();
+        if (name.length > 0) {
+          startChatButton.disabled = false;
+        } else {
+          startChatButton.disabled = true;
+        }
+      });
+
+      // 新規チャット開始ボタンのクリック
+      startChatButton.addEventListener('click', () => {
+        const name = homeNicknameInput.value.trim();
+        if (name.length > 0) {
+          nickname = name;
+          // ローカルストレージにニックネームを一時保存
+          localStorage.setItem('nickname_temp', nickname);
+          // 新規セッション作成のために /create にリダイレクト
+          window.location.href = '/create';
+        }
+      });
+    }
+
+    // 既存セッションでのニックネーム入力を促す
+    function promptNicknameForExistingSession() {
+      // 参加画面を表示してニックネームの入力を促す
+      joinScreen.classList.add('active');
+      joinScreen.style.display = 'flex';
+      setupJoinScreen();
+    }
+
+    // 参加画面のセットアップ
+    function setupJoinScreen() {
+      // ニックネーム入力の監視
+      joinNicknameInput.addEventListener('input', () => {
+        const name = joinNicknameInput.value.trim();
+        if (name.length > 0) {
+          joinChatButton.disabled = false;
+        } else {
+          joinChatButton.disabled = true;
+        }
+      });
+
+      // チャット参加ボタンのクリック
+      joinChatButton.addEventListener('click', () => {
+        const name = joinNicknameInput.value.trim();
+        if (name.length > 0) {
+          nickname = name;
+          // ローカルストレージにニックネームを保存
+          localStorage.setItem(`nickname_${sessionId}`, nickname);
+          // ニックネームをサーバーに送信
+          socket.emit('set nickname', { sessionId, nickname });
+          // チャット画面を表示
+          joinScreen.classList.remove('active');
+          joinScreen.style.display = 'none';
+          chatScreen.classList.add('active');
+          chatScreen.style.display = 'flex';
+        }
+      });
+    }
+
+    // チャット情報（QRコードとウェブリンク）の設定
+    function setupChatInfo() {
+      // QRコードを取得
+      fetch(`/qrcode/${sessionId}`)
+        .then(response => response.json())
+        .then(data => {
+          if (data.qrCode) {
+            qrcodeImg.src = data.qrCode;
+            webLink.href = `${window.location.origin}/${sessionId}`;
+            webLink.textContent = `${window.location.origin}/${sessionId}`;
+          } else if (data.error) {
+            console.error('QRコード取得エラー:', data.error);
+          }
+        })
+        .catch(err => {
+          console.error('QRコード取得エラー:', err);
+        });
+    }
+
+    // メッセージ送信のハンドリング
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const message = input.value.trim();
+      if (message.length > 0 && nickname && sessionId) {
+        const msgObj = {
+          sessionId: sessionId,
+          message: message
+        };
+        socket.emit('chat message', msgObj);
+        input.value = '';
+      }
+    });
+
+    // メッセージ受信のハンドリング
+    socket.on('chat message', (msgObj) => {
+      const item = document.createElement('div');
+      item.classList.add('message');
+      item.innerHTML = `<div class="sender">${escapeHTML(msgObj.sender)}:</div><div class="content">${escapeHTML(msgObj.content)}</div>`;
+      messages.appendChild(item);
+      messages.scrollTop = messages.scrollHeight;
+    });
+
+    // チャット履歴の受信と表示
+    socket.on('chat history', (history) => {
+      history.forEach(msgObj => {
+        if (msgObj.type === 'text') {
+          const item = document.createElement('div');
+          item.classList.add('message');
+          item.innerHTML = `<div class="sender">${escapeHTML(msgObj.sender)}:</div><div class="content">${escapeHTML(msgObj.content)}</div>`;
+          messages.appendChild(item);
+        } else if (msgObj.type === 'audio') {
+          const audioBlob = base64ToBlob(msgObj.audio, 'audio/webm');
+          const audioURL = URL.createObjectURL(audioBlob);
+          
+          const audioContainer = document.createElement('div');
+          audioContainer.classList.add('message');
+          audioContainer.style.display = 'flex';
+          audioContainer.style.flexDirection = 'column';
+          audioContainer.style.alignItems = 'flex-start';
+          
+          const senderDiv = document.createElement('div');
+          senderDiv.classList.add('sender');
+          senderDiv.textContent = `${msgObj.sender}:`;
+          
+          const audioElement = document.createElement('audio');
+          audioElement.controls = true;
+          audioElement.src = audioURL;
+          
+          audioContainer.appendChild(senderDiv);
+          audioContainer.appendChild(audioElement);
+          messages.appendChild(audioContainer);
+        }
+      });
+      messages.scrollTop = messages.scrollHeight;
+    });
+
+    // 音声メッセージの送信
+    let mediaRecorder;
+    let audioChunks = [];
+    let recordingTimeout;
+
+    recordButton.addEventListener('click', async () => {
+      if (recordButton.classList.contains('recording')) {
+        // 録音停止
+        mediaRecorder.stop();
+        clearTimeout(recordingTimeout);
+        recordButton.classList.remove('recording');
+        recordButton.textContent = '音声送信';
+      } else {
+        // 録音開始
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+          try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(stream);
+            audioChunks = [];
+
+            mediaRecorder.ondataavailable = event => {
+              audioChunks.push(event.data);
+            };
+
+            mediaRecorder.onstop = async () => {
+              const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+              const base64Audio = await blobToBase64(audioBlob);
+              const msgObj = {
+                sessionId: sessionId,
+                nickname: nickname,
+                audio: base64Audio
+              };
+              socket.emit('audio message', msgObj);
+              stream.getTracks().forEach(track => track.stop()); // ストリームを停止
+            };
+
+            mediaRecorder.start();
+            recordButton.classList.add('recording');
+            recordButton.textContent = '録音中...';
+
+            // 最大録音時間を30秒に設定
+            recordingTimeout = setTimeout(() => {
+              mediaRecorder.stop();
+              recordButton.classList.remove('recording');
+              recordButton.textContent = '音声送信';
+            }, 30000); // 30,000ミリ秒 = 30秒
+          } catch (err) {
+            console.error('音声録音エラー:', err);
+            alert('音声録音に失敗しました。');
+          }
+        } else {
+          alert('音声録音に対応していません。');
+        }
+      }
+    });
+
+    // 音声メッセージの受信のハンドリング
+    socket.on('audio message', (msgObj) => {
+      const audioBlob = base64ToBlob(msgObj.audio, 'audio/webm');
+      const audioURL = URL.createObjectURL(audioBlob);
+      
+      const audioContainer = document.createElement('div');
+      audioContainer.classList.add('message');
+      audioContainer.style.display = 'flex';
+      audioContainer.style.flexDirection = 'column';
+      audioContainer.style.alignItems = 'flex-start';
+
+      const senderDiv = document.createElement('div');
+      senderDiv.classList.add('sender');
+      senderDiv.textContent = `${msgObj.sender}:`;
+
+      const audioElement = document.createElement('audio');
+      audioElement.controls = true;
+      audioElement.src = audioURL;
+
+      audioContainer.appendChild(senderDiv);
+      audioContainer.appendChild(audioElement);
+      messages.appendChild(audioContainer);
+      messages.scrollTop = messages.scrollHeight;
+    });
+
+    // 情報表示ボタンのクリック
+    showInfoButton.addEventListener('click', () => {
+      popup.style.display = 'flex';
+    });
+
+    // ポップアップの閉じるボタン
+    closePopupButton.addEventListener('click', () => {
+      popup.style.display = 'none';
+    });
+
+    // チャット破棄ボタンのクリック
+    destroyButton.addEventListener('click', () => {
+      if (confirm('チャットを破棄して全てのデータを削除しますか？')) {
+        socket.emit('destroy chat', sessionId);
+      }
+    });
+
+    // チャット破棄の通知を受信
+    socket.on('chat destroyed', () => {
+      alert('チャットが破棄されました。ページをリロードします。');
+      window.location.href = '/';
+    });
+
+    // サーバーからのエラーメッセージの受信
+    socket.on('error message', (msg) => {
+      console.error('エラーメッセージ:', msg);
+      // エラーメッセージ画面を表示
+      homeScreen.classList.remove('active');
+      homeScreen.style.display = 'none';
+      joinScreen.classList.remove('active');
+      joinScreen.style.display = 'none';
+      chatScreen.classList.remove('active');
+      chatScreen.style.display = 'none';
+      errorMessage.classList.add('active');
+      errorMessage.style.display = 'flex';
+    });
+
+    // サーバーからのニックネーム重複エラーの受信
+    socket.on('nickname exists', (msg) => {
+      alert(msg);
+      // ローカルストレージから既存のニックネームを削除
+      localStorage.removeItem(`nickname_${sessionId}`);
+      // チャット画面を非表示にし、ニックネームの再設定を促す
+      chatScreen.classList.remove('active');
+      chatScreen.style.display = 'none';
+      joinScreen.classList.add('active');
+      joinScreen.style.display = 'flex';
+    });
+
+    // ニックネームをサニタイズする関数
+    function escapeHTML(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    // 初期化
+    init();
+  </script>
+</body>
+</html>
